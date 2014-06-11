@@ -1,0 +1,22 @@
+#include <iostream>
+#include <pqxx/pqxx>
+
+using namespace std;
+using namespace pqxx;
+
+int main(int argc, char* argv[])
+{
+	try {
+		connection C("dbname=cofi user=cofi password=cofi hostaddr=127.0.0.1 port=5432");
+		
+		if(C.is_open()) {
+			cout << "Opened database successfully: " << C.dbname() << endl;
+		} else {
+			cout << "Can't open database" << endl;
+			return 1;
+		}
+	} catch(const std::exception &e) {
+		cerr << e.what() << endl;
+		return 1;
+	}
+}
