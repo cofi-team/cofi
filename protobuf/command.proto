@@ -1,0 +1,7 @@
+package tutorial;
+
+message Command {
+	required string tag = 1;
+	required string cmd = 2;
+	required string description = 3;
+}

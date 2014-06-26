@@ -1,18 +1,13 @@
-CC=g++
-CFLAGS=-c -Wall
-LIB_DIR=/usr/local/lib
-LDFLAGS=-lpqxx -lpq -L$(LIB_DIR)
-SOURCES=main.cpp
-OBJECTS=$(SOURCES:.cpp=.o)
-EXECUTABLE=cofi
+all: cofi
 
-all: $(SOURCES) $(EXECUTABLE)
+cofi: main.o server.o
+	g++ main.o server.o -o -lpqxx -lpq cofi
 
-$(EXECUTABLE): $(OBJECTS)
-	$(CC) $(LDFLAGS) $(OBJECTS) -o $@
+main.o: server.h main.cpp
+	g++ -c main.cpp
 
-.cpp.o: 
-	$(CC) $(CFLAGS) $< -o $@
+server.o: server.h server.cpp
+	g++ -c server.cpp
 
-clean:
-	rm -f *.o cofi
+clean: 
+	rm -rf *o cofi
