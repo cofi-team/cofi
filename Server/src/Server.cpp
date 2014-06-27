@@ -11,11 +11,13 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <list>
 
 #include "../header/server.h"
 #include "../header/commandRequest.h"
 #include "../header/dbconnection.h"
 #include "../header/sqlStatement.h"
+#include "../header/protobuf/out/command.pb.h"
 
 #define closesocket(s) close(s)
 
@@ -29,9 +31,9 @@ static void serv_request(int in, int out, char* rootpath);
 
 static char* getValue(char* keyValue);
 
-static const char* getRequestedCommands();
+static const list<string> getRequestedCommands();
 
-static const char* getRequestedCommands() {
+static const list<string> getRequestedCommands() {
 	DBConnection con;
 	pqxx::connection& connection = con.openConnection();
 
@@ -39,6 +41,8 @@ static const char* getRequestedCommands() {
 	SqlStatement stm;
 	char * sqlstmt = "Select * from command;";
 	pqxx::result res = stm.execute(connection, sqlstmt);
+
+	static list<string> dbEntryList;
 
 	for (pqxx::result::const_iterator row = res.begin(); row != res.end(); ++row)
 	{
@@ -53,10 +57,15 @@ static const char* getRequestedCommands() {
 		<< row["cmd"].as<std::string>() << "\t"
 		<< row["description"].as<std::string>()
 		<< std::endl;
-	  response += row["tag"].as<std::string>() + string(" ") + row["cmd"].as<std::string>() + string(" ") + row["description"].as<std::string>();
+	  dbEntryList.push_front(row["description"].as<std::string>());
+	  dbEntryList.push_front(row["cmd"].as<std::string>());
+	  dbEntryList.push_front(row["tag"].as<std::string>());
+
+	  //response += row["tag"].as<std::string>() + string(" ") + row["cmd"].as<std::string>() + string(" ") + row["description"].as<std::string>();
 	}
 
-	return response.c_str();
+	//return response.c_str();
+	return dbEntryList;
 }
 
 void BlockedServer::execute(char **argv)
@@ -148,10 +157,25 @@ static void serv_request(int in, int out, char* rootpath)
 		printf("value of category: %s\n", cmdRequest.getCategory());
 		printf("value of searchstring: %s\n", cmdRequest.getCommand());
 
-		const char* list = getRequestedCommands();
+		list<string> dbEntryList = getRequestedCommands();
+
+		GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+		tutorial::Command cmd;
+
+		int i = 0;
+		for(list<string>::iterator it = dbEntryList.begin(); it != dbEntryList.end(); it++) {
+			if(i == 0) cmd.set_tag((*it).data());
+			if(i == 1) cmd.set_cmd((*it).data());
+			if(i == 2) cmd.set_description((*it).data());
+			i++;
+		}
+
+		string serializedCommand;
+		cmd.SerializeToString(&serializedCommand);
 
 		std::stringstream html;
-		html << "<html><body><p>" << list << "</p></body></html>";
+		html << "<html><body><p>" << serializedCommand << "</p></body></html>";
 		string htmlString = html.str();
 
 		//char* html = "<html><body>" + string(list) + "</body></html>";
@@ -166,6 +190,10 @@ static void serv_request(int in, int out, char* rootpath)
 
 		send(out, buffer, strlen(buffer), 0);
 		fflush(stdout);
+
+		google::protobuf::ShutdownProtobufLibrary();
+
+
 		/*do {
 			count = read(fd, buffer, sizeof(buffer));
 			send(out, buffer, count, 0);
