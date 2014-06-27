@@ -175,12 +175,12 @@ static void serv_request(int in, int out, char* rootpath)
 		cmd.SerializeToString(&serializedCommand);
 
 		std::stringstream html;
-		html << "<html><body><p>" << serializedCommand << "</p></body></html>";
+		html << "HTTP/1.0 200 OK\nContent-Type: text/html\n\n" << "<html><body><p>" << serializedCommand << "</p></body></html>";
 		string htmlString = html.str();
 
 		//char* html = "<html><body>" + string(list) + "</body></html>";
-		sprintf(buffer, "HTTP/1.0 200 OK\nContent-Type: text/html\n\n");
-		send(out, buffer, strlen(buffer), 0);
+		//sprintf(buffer, "HTTP/1.0 200 OK\nContent-Type: text/html\n\n");
+		//send(out, buffer, strlen(buffer), 0);
 
 		/*Date: Fri, 31 Dec 1999 23:59:59 GMT
 		Content-Type: text/html
