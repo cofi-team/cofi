@@ -17,7 +17,7 @@
 #include "../header/commandRequest.h"
 #include "../header/dbconnection.h"
 #include "../header/sqlStatement.h"
-#include "../header/protobuf/out/command.pb.h"
+#include "../header/protobuf/out/command_java.pb.h"
 
 #define closesocket(s) close(s)
 
@@ -31,16 +31,25 @@ static void serv_request(int in, int out, char* rootpath);
 
 static char* getValue(char* keyValue);
 
-static const list<string> getRequestedCommands();
+static const list<string> getRequestedCommands(char*, char*);
 
-static const list<string> getRequestedCommands() {
+static const list<string> getRequestedCommands(char* categorie, char* tag) {
 	DBConnection con;
-	pqxx::connection& connection = con.openConnection();
+
+	con.openConnection();
 
 	string response;
 	SqlStatement stm;
-	char * sqlstmt = "Select * from command;";
-	pqxx::result res = stm.execute(connection, sqlstmt);
+	std::stringstream sqlstmtString;
+	sqlstmtString << "Select * from command where category like '%" << categorie << "%' and tag like '%" << tag << "%';";
+
+	//string sqlstmtString = "Select * from command where categorie like '%" + categorie + "%' and tag like '" + tag + "'";
+	string s = sqlstmtString.str();
+
+	char * sqlstmt  = new char[s.length()];
+	strcpy(sqlstmt, s.c_str());
+
+	pqxx::result res = stm.execute(con.getConnection(), sqlstmt);
 
 	static list<string> dbEntryList;
 
@@ -60,11 +69,8 @@ static const list<string> getRequestedCommands() {
 	  dbEntryList.push_front(row["description"].as<std::string>());
 	  dbEntryList.push_front(row["cmd"].as<std::string>());
 	  dbEntryList.push_front(row["tag"].as<std::string>());
-
-	  //response += row["tag"].as<std::string>() + string(" ") + row["cmd"].as<std::string>() + string(" ") + row["description"].as<std::string>();
 	}
 
-	//return response.c_str();
 	return dbEntryList;
 }
 
@@ -149,15 +155,20 @@ static void serv_request(int in, int out, char* rootpath)
 		// url format: localhost:8096/category=xxx&search=yyy
 		printf("got request: GET %s\n", url);
 
-		category = strtok(url, "/&");
+		char *cofiPath = strtok(url, "/?&");
+		category = strtok(NULL, "?&");
 		searchstring = strtok(NULL, "&");
+
+		if(category == NULL || searchstring == NULL) {
+			return;
+		}
 
 		CommandRequest cmdRequest(getValue(category), getValue(searchstring));
 
 		printf("value of category: %s\n", cmdRequest.getCategory());
 		printf("value of searchstring: %s\n", cmdRequest.getCommand());
 
-		list<string> dbEntryList = getRequestedCommands();
+		list<string> dbEntryList = getRequestedCommands(cmdRequest.getCategory(), cmdRequest.getCommand());
 
 		GOOGLE_PROTOBUF_VERIFY_VERSION;
 
@@ -171,12 +182,37 @@ static void serv_request(int in, int out, char* rootpath)
 			i++;
 		}
 
-		string serializedCommand;
-		cmd.SerializeToString(&serializedCommand);
+		cout << "Command: " << "Tag: " << cmd.tag() << " - Cmd: " << cmd.cmd() << " - Desc.: " << cmd.description() << std::endl;
+
+		tutorial::Command testCmd;
+		testCmd.set_cmd("java");
+		testCmd.set_tag("compile java source");
+		testCmd.set_description("kompiliert den Java Quellcode in Java Bytecode");
+
+		char testCmdArr[testCmd.ByteSize()];
+		bool isSerialized = testCmd.SerializeToArray(testCmdArr, testCmd.ByteSize());
+
+		//string serializedCommand;
+		int byteSize = cmd.ByteSize();
+		char byteCmd[byteSize];
+		bool serialized = cmd.SerializeToArray(byteCmd, byteSize);
+		//bool stringSerialized = cmd.SerializeToString(&serializedCommand);
+		//cmd.SerializeToString(&serializedCommand);
+
+		cout << "serialized: " << serialized << std::endl;
+
+		char *t = "HTTP/1.0 200 OK\nContent-Type: text/html\n";
+		strcat(buffer, t);
 
 		std::stringstream html;
-		html << "HTTP/1.0 200 OK\nContent-Type: text/html\n\n" << "<html><body><p>" << serializedCommand << "</p></body></html>";
+		html << "HTTP/1.0 200 OK\nContent-Type: text/html\n" << "Content-Length:" << 130 << "\n\n"; // << serializedCommand;
 		string htmlString = html.str();
+
+		// POST data
+		/*std::stringstream postDataStringStream;
+		postDataStringStream << "param1=" << serializedCommand;
+		string postData = postDataStringStream.str();*/
+		//sprintf(buffer,"POST %s HTTP1.1\r\nAccept: */*\r\nReferer: Marcel Zinnow\r\nAccept-Language: en-us\r\nContent-Type: application/x-www-form-urlencoded\r\nAccept-Encoding: gzip,deflate\r\nUser-Agent: Mozilla/4.0\r\nContent-Length: %d\r\nPragma: no-cache\r\nConnection: keep-alive\r\n\r\n%s", url, strlen(postData.c_str()),postData.c_str());
 
 		//char* html = "<html><body>" + string(list) + "</body></html>";
 		//sprintf(buffer, "HTTP/1.0 200 OK\nContent-Type: text/html\n\n");
@@ -186,13 +222,23 @@ static void serv_request(int in, int out, char* rootpath)
 		Content-Type: text/html
 		Content-Length: 1354*/
 
-		sprintf(buffer, htmlString.c_str());
+		/*sprintf(buffer, htmlString.c_str());
+
+		send(out, buffer, strlen(buffer), 0);
+
+		sprintf(buffer, byteCmd);
+
+		send(out, buffer, strlen(buffer), 0);*/
+
+		//std::stringstream debugOutput;
+		html << "<html><body>Command: tag = " << cmd.tag() << " cmd = " << cmd.cmd() << " description = " << cmd.description() << "</body></html>";
+		string serializedCommand = html.str();
+		sprintf(buffer, serializedCommand.c_str());
 
 		send(out, buffer, strlen(buffer), 0);
 		fflush(stdout);
 
 		google::protobuf::ShutdownProtobufLibrary();
-
 
 		/*do {
 			count = read(fd, buffer, sizeof(buffer));

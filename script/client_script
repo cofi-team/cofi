@@ -1,0 +1,4 @@
+#!/bin/bash
+
+wget -O /tmp/cofi http://localhost:8096/category=vi/searchstring=tausche
+cat /tmp/cofi

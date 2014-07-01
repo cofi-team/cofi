@@ -19,15 +19,16 @@ pqxx::result SqlStatement::execute(pqxx::connection& conn, char *sqlCommand) {
 
 	// Start a transaction.  With libpqxx we're always working in
 	// a transaction.
-	pqxx::work txn(conn);
+	//pqxx::work txn(conn);
+	pqxx::nontransaction ntx(conn);
 
 
 	//pqxx::transaction_base &txn);
 
 	// Execute database query and immediately retrieve results.
-	pqxx::result res = txn.exec(sqlCommand);
+	pqxx::result res = ntx.exec(sqlCommand);
 
-	txn.commit();
+	//txn.commit();
 
 	conn.disconnect();
 

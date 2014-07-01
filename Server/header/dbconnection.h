@@ -13,7 +13,9 @@ class DBConnection
 		DBConnection(char* dbname, char* user, char* pwd, char* host, int port);
 		DBConnection(DBConnection &cmdReq);
 	
-		pqxx::connection& openConnection();
+		void openConnection();
+		void closeConnection(pqxx::connection&);
+		pqxx::connection& getConnection();
 		
 
 	private:
@@ -22,6 +24,7 @@ class DBConnection
 		char *pwd;
 		char *host;
 		int port;
+		pqxx::connection c;
 };
 
 class DatabaseException { };
