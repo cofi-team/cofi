@@ -155,7 +155,7 @@ static void serv_request(int in, int out, char* rootpath)
 		// url format: localhost:8096/category=xxx&search=yyy
 		printf("got request: GET %s\n", url);
 
-		char *cofiPath = strtok(url, "/?&");
+		char *cofi = strtok(url, "/?&");
 		category = strtok(NULL, "?&");
 		searchstring = strtok(NULL, "&");
 
@@ -184,61 +184,49 @@ static void serv_request(int in, int out, char* rootpath)
 
 		cout << "Command: " << "Tag: " << cmd.tag() << " - Cmd: " << cmd.cmd() << " - Desc.: " << cmd.description() << std::endl;
 
-		tutorial::Command testCmd;
-		testCmd.set_cmd("java");
-		testCmd.set_tag("compile java source");
-		testCmd.set_description("kompiliert den Java Quellcode in Java Bytecode");
-
-		char testCmdArr[testCmd.ByteSize()];
-		bool isSerialized = testCmd.SerializeToArray(testCmdArr, testCmd.ByteSize());
-
 		//string serializedCommand;
 		int byteSize = cmd.ByteSize();
 		char byteCmd[byteSize];
 		bool serialized = cmd.SerializeToArray(byteCmd, byteSize);
+		//string serialized = cmd.SerializeAsString();
+
+		//string newLine = "\n";
+		//byteCmd[byteSize-1] = n;
+
 		//bool stringSerialized = cmd.SerializeToString(&serializedCommand);
 		//cmd.SerializeToString(&serializedCommand);
 
 		cout << "serialized: " << serialized << std::endl;
 
-		char *t = "HTTP/1.0 200 OK\nContent-Type: text/html\n";
-		strcat(buffer, t);
+		//char *t = "HTTP/1.0 200 OK\nContent-Type: text/html\n";
+		//strcat(buffer, t);
+
+		int contentLength = byteSize;
 
 		std::stringstream html;
-		html << "HTTP/1.0 200 OK\nContent-Type: text/html\n" << "Content-Length:" << 130 << "\n\n"; // << serializedCommand;
+		//html << "HTTP/1.0 200 OK\nContent-Type: text/html\n" << "Content-Length:" << contentLength << "\n\n"; // << serializedCommand;
+		html << "HTTP/1.0 200 OK\nContent-Type: text/html\n"; // << serialized;
 		string htmlString = html.str();
 
-		// POST data
-		/*std::stringstream postDataStringStream;
-		postDataStringStream << "param1=" << serializedCommand;
-		string postData = postDataStringStream.str();*/
-		//sprintf(buffer,"POST %s HTTP1.1\r\nAccept: */*\r\nReferer: Marcel Zinnow\r\nAccept-Language: en-us\r\nContent-Type: application/x-www-form-urlencoded\r\nAccept-Encoding: gzip,deflate\r\nUser-Agent: Mozilla/4.0\r\nContent-Length: %d\r\nPragma: no-cache\r\nConnection: keep-alive\r\n\r\n%s", url, strlen(postData.c_str()),postData.c_str());
-
-		//char* html = "<html><body>" + string(list) + "</body></html>";
-		//sprintf(buffer, "HTTP/1.0 200 OK\nContent-Type: text/html\n\n");
-		//send(out, buffer, strlen(buffer), 0);
-
-		/*Date: Fri, 31 Dec 1999 23:59:59 GMT
-		Content-Type: text/html
-		Content-Length: 1354*/
-
-		/*sprintf(buffer, htmlString.c_str());
-
+		sprintf(buffer, htmlString.c_str());
 		send(out, buffer, strlen(buffer), 0);
 
-		sprintf(buffer, byteCmd);
+		sprintf(buffer, byteCmd, byteSize);
+		send(out, buffer, strlen(buffer), 0);
 
-		send(out, buffer, strlen(buffer), 0);*/
+		//sprintf(buffer, serialized.data());
+		//send(out, buffer, serialized.size(), 0);
 
 		//std::stringstream debugOutput;
-		html << "<html><body>Command: tag = " << cmd.tag() << " cmd = " << cmd.cmd() << " description = " << cmd.description() << "</body></html>";
-		string serializedCommand = html.str();
-		sprintf(buffer, serializedCommand.c_str());
+		//html << "<html><body>Command: tag = " << cmd.tag() << " cmd = " << cmd.cmd() << " description = " << cmd.description() << "</body></html>";
+		//string serializedCommand = html.str();
+		//sprintf(buffer, serializedCommand.c_str());
 
-		send(out, buffer, strlen(buffer), 0);
+		//send(out, buffer, strlen(buffer), 0);
 		fflush(stdout);
 
 		google::protobuf::ShutdownProtobufLibrary();
+
 
 		/*do {
 			count = read(fd, buffer, sizeof(buffer));
