@@ -149,17 +149,18 @@ static void serv_request(int in, int out, char* rootpath)
 
 	if(strlen(url)) {
 
-		char *category;
-		char *searchstring;
+		char* category = NULL;
+		char* searchstring = NULL;
 
 		// url format: localhost:8096/category=xxx&search=yyy
 		printf("got request: GET %s\n", url);
-
 		char *cofi = strtok(url, "/?&");
+
 		category = strtok(NULL, "?&");
 		searchstring = strtok(NULL, "&");
 
 		if(category == NULL || searchstring == NULL) {
+			// send http response with clear information for user
 			return;
 		}
 
